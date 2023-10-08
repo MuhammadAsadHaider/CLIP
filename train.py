@@ -10,10 +10,10 @@ import numpy as np
 from PIL import Image
 
 
-df = pd.read_csv("captions.txt")
+df = pd.read_csv("dataset/captions.txt")
 df['id'] = [id_ for id_ in range(df.shape[0] // 5) for _ in range(5)]
-df.to_csv("captions.csv", index=False)
-df = pd.read_csv("captions.csv")
+df.to_csv("dataset/captions.csv", index=False)
+df = pd.read_csv("dataset/captions.csv")
 
 
 batch_size = 512
@@ -39,7 +39,7 @@ class CLIPDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = {}
 
-        image = Image.open(f"Images/{self.image_filenames[idx]}").convert("RGB")
+        image = Image.open(f"dataset/Images/{self.image_filenames[idx]}").convert("RGB")
         image = preprocess(image)
         item['image'] = image
         item['caption'] = self.captions[idx]
@@ -50,7 +50,7 @@ class CLIPDataset(torch.utils.data.Dataset):
 
 
 def make_train_valid_dfs():
-    dataframe = pd.read_csv(f"captions.csv")
+    dataframe = pd.read_csv(f"dataset/captions.csv")
     max_id = dataframe["id"].max() + 1
     image_ids = np.arange(0, max_id)
     np.random.seed(42)
@@ -94,28 +94,36 @@ lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCH * len
 
 
 for epoch in tqdm(range(EPOCH)):
-  epoch_loss = 0
-  for batch in tqdm(train_dataloader) :
-      optimizer.zero_grad()
+    epoch_loss = 0
+    for batch in tqdm(train_dataloader) :
+        optimizer.zero_grad()
 
-      images= batch['image'].to(device)
-      texts = clip.tokenize(batch['caption']).to(device)
-    
-      logits_per_image, logits_per_text = model(images, texts)
+        images= batch['image'].to(device)
+        texts = clip.tokenize(batch['caption']).to(device)
 
-      ground_truth = torch.arange(len(images),dtype=torch.long,device=device)
+        logits_per_image, logits_per_text = model(images, texts)
 
-      total_loss = (loss_img(logits_per_image,ground_truth) + loss_txt(logits_per_text,ground_truth))/2
-      epoch_loss += total_loss.item()
-      total_loss.backward()
-      if device == "cpu":
-         optimizer.step()
-      else : 
-        convert_models_to_fp32(model)
+        ground_truth = torch.arange(len(images),dtype=torch.long,device=device)
+
+        total_loss = (loss_img(logits_per_image,ground_truth) + loss_txt(logits_per_text,ground_truth))/2
+        print('Batch Loss : ', total_loss.item())
+        epoch_loss += total_loss.item()
+        total_loss.backward()
+        if device == "cpu":
+            optimizer.step()
+        else: 
+            convert_models_to_fp32(model)
         optimizer.step()
         lr_scheduler.step()
         clip.model.convert_weights(model)
-  print(f"Epoch {epoch} : {epoch_loss/len(train_dataloader)}")
+    total_loss = epoch_loss / len(train_dataloader)
+    print(f"Epoch {epoch} : {total_loss}")
+    torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': total_loss,
+            }, f"model_checkpoint/model_epoch_{epoch}.pt")
 
 
 
