@@ -77,6 +77,7 @@ lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCH * 331
 
 for epoch in tqdm(range(EPOCH)):
     epoch_loss = 0
+    bad_images = 0
     for batch in tqdm(train_dataloader):
         batch = fetch_images(batch, num_threads=num_threads)
         images = batch["image"]
@@ -89,6 +90,7 @@ for epoch in tqdm(range(EPOCH)):
                 valid_images.append(image)
                 valid_captions.append(captions[i])
             except:
+                bad_images += 1
                 continue
 
         images = torch.stack(valid_images).to(device)
@@ -113,6 +115,7 @@ for epoch in tqdm(range(EPOCH)):
         clip.model.convert_weights(model)
     total_loss = epoch_loss / len(train_dataloader)
     print(f"Epoch {epoch} : {total_loss}")
+    print(f"Bad Images : {bad_images}")
     torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
