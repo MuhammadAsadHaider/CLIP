@@ -79,8 +79,20 @@ for epoch in tqdm(range(EPOCH)):
     epoch_loss = 0
     for batch in tqdm(train_dataloader):
         batch = fetch_images(batch, num_threads=num_threads)
-        images = torch.stack([preprocess(image) for image in batch["image"]]).to(device)
-        texts = clip.tokenize(batch['caption']).to(device)
+        images = batch["image"]
+        captions = batch["caption"]
+        valid_images = []
+        valid_captions = []
+        for i in range(len(images)):
+            try:
+                image = preprocess(images[i])
+                valid_images.append(image)
+                valid_captions.append(captions[i])
+            except:
+                continue
+
+        images = torch.stack(valid_images).to(device)
+        texts = clip.tokenize(valid_captions).to(device)
 
         optimizer.zero_grad()
 
