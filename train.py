@@ -77,8 +77,9 @@ def build_loaders(dataframe, mode):
 
 def convert_models_to_fp32(model): 
     for p in model.parameters(): 
-        p.data = p.data.float() 
-        p.grad.data = p.grad.data.float()
+        p.data = p.data.float()
+        if p.grad is not None:
+            p.grad.data = p.grad.data.float()
 
 
 train_dataframe , valid_dataframe = make_train_valid_dfs()
