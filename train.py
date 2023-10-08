@@ -15,7 +15,7 @@ df.to_csv("dataset/captions.csv", index=False)
 df = pd.read_csv("dataset/captions.csv")
 
 
-batch_size = 150
+batch_size = 128
 EPOCH = 10
 
 
