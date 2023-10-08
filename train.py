@@ -5,7 +5,6 @@ import torch.optim as optim
 import pandas as pd
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-import cv2
 import numpy as np
 from PIL import Image
 
