@@ -16,11 +16,12 @@ df.to_csv("captions.csv", index=False)
 df = pd.read_csv("captions.csv")
 
 
-batch_size = 5
+batch_size = 512
 EPOCH = 10
 
 
-device = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu" # If using GPU then use mixed precision training.
+device = "cuda:0" if torch.cuda.is_available() else "cpu" # If using GPU then use mixed precision training.
+print("Using device: ", device)
 model, preprocess = clip.load("ViT-B/16",device=device,jit=False) #Must set jit=False for training
 
 
@@ -50,7 +51,7 @@ class CLIPDataset(torch.utils.data.Dataset):
 
 def make_train_valid_dfs():
     dataframe = pd.read_csv(f"captions.csv")
-    max_id = 10 #dataframe["id"].max() + 1
+    max_id = dataframe["id"].max() + 1
     image_ids = np.arange(0, max_id)
     np.random.seed(42)
     valid_ids = np.random.choice(
