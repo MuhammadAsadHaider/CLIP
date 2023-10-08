@@ -202,6 +202,18 @@ class Transformer(nn.Module):
     def forward(self, x: torch.Tensor):
         return self.resblocks(x)
 
+class PaclEmbedder(nn.Module):
+    def __init__(self, width: int, output_dim: int):
+        super().__init__()
+        self.skip_connection = nn.Linear(width, output_dim)
+        self.main_branch = nn.Sequential(
+            nn.Linear(width, width),
+            nn.ReLU(),
+            nn.Linear(width, output_dim)
+        )
+
+    def forward(self, x: torch.Tensor):
+        return self.skip_connection(x) + self.main_branch(x)
 
 class VisionTransformer(nn.Module):
     def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int):
@@ -219,6 +231,7 @@ class VisionTransformer(nn.Module):
 
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
+        self.pacl_embedder = PaclEmbedder(width, output_dim)
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)  # shape = [*, width, grid, grid]
@@ -232,9 +245,13 @@ class VisionTransformer(nn.Module):
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
 
-        x = self.ln_post(x[:, 0, :])
+        #x = self.ln_post(x[:, 0, :])
+        x = self.ln_post(x[:, 1:, :])
 
-        if self.proj is not None:
+        if self.pacl_embedder is not None:
+            x = self.pacl_embedder(x)
+
+        elif self.proj is not None:
             x = x @ self.proj
 
         return x
@@ -359,8 +376,18 @@ class CLIP(nn.Module):
         image_features = self.encode_image(image)
         text_features = self.encode_text(text)
 
+        # PACL code
+        s = image_features @ text_features.unsqueeze(-1)
+        a = F.softmax(s, dim=1)
+        v = image_features.permute(0, 2, 1) @ a
+        v = v.squeeze(-1)
+
         # normalized features
-        image_features = image_features / image_features.norm(dim=1, keepdim=True)
+
+        # PACL change
+        #image_features = image_features / image_features.norm(dim=1, keepdim=True)
+        image_features = v / v.norm(dim=1, keepdim=True)
+
         text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
         # cosine similarity as logits
@@ -432,5 +459,5 @@ def build_model(state_dict: dict):
             del state_dict[key]
 
     convert_weights(model)
-    model.load_state_dict(state_dict)
+    model.load_state_dict(state_dict, strict=False)
     return model.eval()
