@@ -29,7 +29,7 @@ df['id'] = ids
 df.to_csv("dataset/f30k/captions.csv", index=False)
 df = pd.read_csv("dataset/f30k/captions.csv")
 
-batch_size = 512
+batch_size = 256
 EPOCH = 20
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu" # If using GPU then use mixed precision training.
