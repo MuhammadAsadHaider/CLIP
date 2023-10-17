@@ -10,6 +10,8 @@ from PIL import Image
 
 
 def shorten_text(text):
+    if text is np.nan:
+        return ""
     if len(text) > 346:
         return text[:346]  # Shorten the text to the first 346 characters
     else:
