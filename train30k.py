@@ -29,7 +29,7 @@ df['id'] = ids
 df.to_csv("dataset/f30k/captions.csv", index=False)
 df = pd.read_csv("dataset/f30k/captions.csv")
 
-batch_size = 256
+batch_size = 512
 EPOCH = 20
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu" # If using GPU then use mixed precision training.
@@ -105,7 +105,6 @@ loss_txt = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.visual.pacl_embedder.parameters(), lr=5e-4,betas=(0.9,0.98),eps=1e-6,weight_decay=0.2)
 lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCH * len(train_dataloader) // batch_size, eta_min=1e-6)
 
-model = nn.DataParallel(model)
 for epoch in tqdm(range(EPOCH)):
     epoch_loss = 0
     valid_epoch_loss = 0
